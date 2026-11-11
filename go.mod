@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/emiago/sipgo v0.24.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/pion/rtp v1.10.2
+	github.com/pion/rtp v1.10.6
 	github.com/pion/srtp/v3 v3.0.12
 	gopkg.in/yaml.v3 v3.0.1
 )
