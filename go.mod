@@ -5,8 +5,8 @@ go 1.25.0
 require (
 	github.com/emiago/sipgo v0.24.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/pion/rtp v1.10.2
-	github.com/pion/srtp/v3 v3.0.12
+	github.com/pion/rtp v1.10.5
+	github.com/pion/srtp/v3 v3.1.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -22,8 +22,8 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/rtcp v1.2.16 // indirect
-	github.com/pion/transport/v4 v4.0.2 // indirect
+	github.com/pion/rtcp v1.2.19 // indirect
+	github.com/pion/transport/v5 v5.1.1 // indirect
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
