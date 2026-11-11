@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- Lane D (rfc-sweep-d) M-IN: UAC toward the series UA at 127.0.0.1:15460; the base offer, then two re-INVITEs 3 s apart (m=audio 15484 with the same codecs, then m=audio 15484 RTP/AVP 8 101). -->
+<scenario name="m-in">
+  <send retrans="500"><![CDATA[
+INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+To: <sip:cf5d-uas@127.0.0.1:15460>
+Call-ID: [call_id]
+CSeq: 1 INVITE
+Contact: <sip:sipp@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 1696 1696 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/AVP 0 8 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="200" timeout="25000"/>
+  <send><![CDATA[
+ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 1 ACK
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <pause milliseconds="3000"/>
+  <send><![CDATA[
+INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 2 INVITE
+Contact: <sip:sipp@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 1696 1697 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15484 RTP/AVP 0 8 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="200" timeout="5000"/>
+  <send><![CDATA[
+ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 2 ACK
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <pause milliseconds="3000"/>
+  <send><![CDATA[
+INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 3 INVITE
+Contact: <sip:sipp@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 1696 1698 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15484 RTP/AVP 8 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="200" timeout="5000">
+    <action>
+      <ereg regexp="m=audio [0-9]+ RTP/AVP 8" search_in="msg" check_it="true" assign_to="c3"/>
+    </action>
+  </recv>
+  <Reference variables="c3"/>
+  <send><![CDATA[
+ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 3 ACK
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <pause milliseconds="6000"/>
+  <send><![CDATA[
+BYE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 99 BYE
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <recv response="200" timeout="5000"/>
+</scenario>

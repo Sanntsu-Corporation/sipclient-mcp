@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<scenario name="uas-options">
+  <send>
+    <![CDATA[
+      OPTIONS sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5daOPT[call_number]
+      From: <sip:cf5d-a-peer@127.0.0.1>;tag=cf5da[call_number]
+      To: <sip:cf5d-uas@127.0.0.1>
+      Call-ID: [call_id]
+      CSeq: 1 OPTIONS
+      Max-Forwards: 70
+      Contact: <sip:cf5d-a-peer@127.0.0.1:15470>
+      Accept: application/sdp
+      Content-Length: 0
+
+    ]]>
+  </send>
+  <recv response="200" timeout="5000">
+    <action>
+      <ereg regexp="INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, UPDATE, NOTIFY" search_in="hdr" header="Allow:" check_it="true" assign_to="a"/>
+      <ereg regexp="application/sdp" search_in="hdr" header="Accept:" check_it="true" assign_to="b"/>
+      <ereg regexp="identity" search_in="hdr" header="Accept-Encoding:" check_it="true" assign_to="c"/>
+      <ereg regexp="en" search_in="hdr" header="Accept-Language:" check_it="true" assign_to="d"/>
+      <ereg regexp="timer" search_in="hdr" header="Supported:" check_it="true" assign_to="e"/>
+    </action>
+  </recv>
+  <Reference variables="a,b,c,d,e"/>
+  <pause milliseconds="500"/>
+</scenario>

@@ -1,0 +1,18 @@
+# e2e/asterisk-xfer/docker-compose.yml
+#
+# Call-transfer interop rig (spec 2026-09-26 §7.2) on the test host —
+# SEPARATE from e2e/asterisk (the §14.5 gate). No build: it reuses the
+# Asterisk image already built on this host, named by XFER_ASTERISK_IMAGE in
+# the .env deploy.sh writes. Ports 5080 (udp/tcp) and 5081 (tls), never
+# 5060/5061 (other programs on this host may hold those).
+services:
+  asterisk:
+    image: ${XFER_ASTERISK_IMAGE:?XFER_ASTERISK_IMAGE must name the pre-built image (README.md preflight)}
+    container_name: e2e-asterisk-xfer
+    restart: unless-stopped
+    # Host networking, as in e2e/asterisk: Docker NAT would rewrite RTP and
+    # SIP source addresses that REFER/Replaces and RTP latching depend on.
+    network_mode: host
+    command: ["asterisk", "-f", "-vvv"]
+    volumes:
+      - ./conf:/etc/asterisk:ro

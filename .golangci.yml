@@ -1,0 +1,160 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - revive
+    - bodyclose
+    - contextcheck
+  exclusions:
+    paths:
+      - internal/sipengine
+      # Vendored upstream sipgo (its own module, tested and vetted separately).
+      - third_party
+    rules:
+      # Locked decision 17: CreateUA(_ context.Context, ...) deliberately uses
+      # m.daemonCtx, not the request context, because a UA must outlive the
+      # request that created it. Deriving from the request context here would
+      # cancel a live UA when its creating request ends — the exact bug
+      # decision 17 exists to prevent. Scoped to this file and this linter
+      # only so it cannot mask an unrelated contextcheck finding elsewhere or
+      # a different linter's finding in this file.
+      - path: internal/session/registry.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 3: destroyUA (ua_destroy and the admin DELETE's
+      # shared teardown) deliberately derives tdCtx from m.daemonCtx, not the
+      # caller's ctx, and passes tdCtx to agent.Hangup/Unregister/Close. The
+      # teardown must outlive the request that triggered it — an operator's
+      # curl timing out below the 10s grace period must not abandon the BYEs,
+      # the Expires: 0 or the transport close. Scoped to this file and this
+      # linter only, mirroring the registry.go entry above, so it cannot mask
+      # an unrelated contextcheck finding elsewhere or a different linter's
+      # finding in this file.
+      - path: internal/session/destroy.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 4: toolservice.go deliberately uses
+      # m.daemonCtx, not the request context, at three call sites —
+      # CallDial's Agent().Dial, UACreate's Register, and UACreate's rollback
+      # UADestroy on a failed REGISTER. A UA and a live call must outlive the
+      # request that started them; deriving from the request context here
+      # would abort an in-flight dial, registration or rollback teardown when
+      # the client's HTTP request ends. Scoped to this file and this linter
+      # only, mirroring the registry.go and destroy.go entries above, so it
+      # cannot mask an unrelated contextcheck finding elsewhere or a
+      # different linter's finding in this file.
+      - path: internal/session/toolservice.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 5: sipua.(*UA).Dial deliberately ignores its
+      # ctx parameter and runs the INVITE transaction on u.daemonCtx via
+      # runDial, exactly like the three session-layer entries above: a
+      # dialled call and the events it emits must outlive the request that
+      # started the dial (D2, N2's 50ms budget — Dial returns before the
+      # call resolves). Scoped to this file and this linter only, so it
+      # cannot mask an unrelated contextcheck finding elsewhere or a
+      # different linter's finding in this file.
+      - path: internal/sipua/call.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 1: run.go's daemon context is created from
+      # context.Background(), never from the SIGTERM/SIGINT-derived ctx run()
+      # receives, and gracefulShutdown is likewise invoked with a fresh
+      # context.Background() rather than that (already Done()) ctx — both
+      # decision 17 by construction, the same class as the four entries
+      # above. Scoped to this file and this linter only, mirroring the
+      # entries above, so it cannot mask an unrelated contextcheck finding
+      # elsewhere or a different linter's finding in this file.
+      - path: cmd/sipclient-mcpd/run.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 6: refreshRegister and startRegisterRefresher's
+      # OnGiveUp closure (R10 registration refresh) call u.emit, which delivers
+      # on the RETAINED evCtx captured by OnEvent (u.uaCtx, the long-lived UA
+      # context) rather than the ctx the refresher's Do/OnGiveUp callback
+      # happens to be running under — deliberately, mirroring call.go's entry
+      # above: a registration event must keep reaching session after the
+      # request or refresh attempt that produced it has ended. Scoped to this
+      # file and this linter only, mirroring the entries above, so it cannot
+      # mask an unrelated contextcheck finding elsewhere or a different
+      # linter's finding in this file.
+      - path: internal/sipua/register.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 7: newUA/newUAStream call u.startKeepalive()
+      # (no ctx param) rather than threading the constructor's ctx into it —
+      # deliberately, per the comment at each call site: the NAT keepalive
+      # must keep running for the life of the UA, not just the constructing
+      # request, the same reasoning as every entry above.
+      - path: internal/sipua/ua.go
+        linters:
+          - contextcheck
+      # Locked decision 17, path 8: waitForDigits' inter-digit gap select
+      # deliberately also watches u.uaCtx.Done() (a long-lived, non-inherited
+      # context) alongside the call's own ctx, so a UA-level teardown ends the
+      # wait even when the request context that started dtmf_send is still
+      # live — the same "long-lived scope must not depend on request scope"
+      # reasoning as the entries above.
+      - path: internal/sipua/dtmf.go
+        linters:
+          - contextcheck
+      # Test/harness helpers below deliberately build their own context
+      # (context.Background(), not the enclosing test/request's ctx): a test
+      # cleanup or fixture must still run after its triggering context is
+      # gone, the same class of reasoning as decision 17, just in test code
+      # rather than production. Scoped per-file so it cannot mask a real
+      # finding elsewhere.
+      - path: e2e/loop/scenarios_p3.go
+        linters:
+          - contextcheck
+      - path: internal/session/capture_test.go
+        linters:
+          - contextcheck
+      - path: internal/session/dialbind_test.go
+        linters:
+          - contextcheck
+      - path: internal/sipua/capture_stream_test.go
+        linters:
+          - contextcheck
+      # session.SessionTimerView deliberately stutters: it is call_status.
+      # session_timer's public view type (§4 spec), referenced by ~40 call
+      # sites across production (toolservice.go, sipua/sessiontimer.go) and
+      # the whole test suite (testutil/fakes, every sessiontimer_*_test.go).
+      # Renaming to satisfy a naming-style linter would touch every one of
+      # those sites for no functional benefit — not a surgical fix (Rule 19).
+      - path: internal/session/collaborators.go
+        linters:
+          - revive
+        text: "stutters"
+      # streamBackoffMin/streamBackoffMax are the minimum and maximum of the
+      # stream reconnect backoff; "Min" means minimum, not minutes, so
+      # revive's time-naming rule is a false positive here. Scoped to this
+      # file, this linter and this variable only.
+      - path: internal/proxy/relay.go
+        linters:
+          - revive
+        text: "time-naming: var streamBackoffMin"
+      # These two source-level invariant tests parse the package's own
+      # non-test files with go/parser.ParseDir, deprecated since Go 1.25 only
+      # because it ignores build tags. The package has no build-tagged files,
+      # and the replacement (golang.org/x/tools/go/packages) would be a new
+      # dependency. Scoped to these files, this check and ParseDir only.
+      - path: internal/session/(eventlookup_invariant|handle)_test\.go
+        linters:
+          - staticcheck
+        text: "SA1019: go/parser.ParseDir"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    paths:
+      - internal/sipengine
+      - third_party

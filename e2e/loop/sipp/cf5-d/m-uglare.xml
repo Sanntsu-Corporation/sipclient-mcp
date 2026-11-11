@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- Lane D (rfc-sweep-d) M-UGLARE: UAS toward the daemon UA (session_refresh_method invite, 90/90); our re-INVITE refresh is held unanswered while SIPp sends an UPDATE with an SDP offer, then 2 s later the 200 to the re-INVITE. -->
+<scenario name="m-uglare">
+  <recv request="INVITE" crlf="true">
+    <action>
+      <ereg regexp=".*" search_in="hdr" header="From:" assign_to="rfrom"/>
+      <ereg regexp="sip:[^>;]*" search_in="hdr" header="Contact:" assign_to="ctc"/>
+    </action>
+  </recv>
+  <Reference variables="rfrom,ctc"/>
+  <send retrans="500"><![CDATA[
+SIP/2.0 200 OK
+[last_Via:]
+[last_From:]
+[last_To:];tag=cf5dd[call_number]
+[last_Call-ID:]
+[last_CSeq:]
+Contact: <sip:cf5d-d@127.0.0.1:[local_port]>
+Allow: INVITE, ACK, BYE, CANCEL, UPDATE, INFO
+Supported: timer
+Require: timer
+Session-Expires: 90;refresher=uac
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 2001 2001 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=sendrecv
+]]></send>
+  <recv request="ACK" crlf="true" timeout="5000"/>
+  <recv request="INVITE" crlf="true" timeout="70000">
+    <action>
+      <ereg regexp=".*" search_in="hdr" header="Via:" assign_to="rvia"/>
+      <ereg regexp=".*" search_in="hdr" header="From:" assign_to="rf2"/>
+      <ereg regexp=".*" search_in="hdr" header="To:" assign_to="rto"/>
+      <ereg regexp=".*" search_in="hdr" header="CSeq:" assign_to="rcseq"/>
+    </action>
+  </recv>
+  <Reference variables="rvia,rf2,rto,rcseq"/>
+  <send><![CDATA[
+UPDATE [$ctc] SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: <sip:cf5d-d@127.0.0.1:[local_port]>;tag=cf5dd[call_number]
+To: [$rfrom]
+Call-ID: [call_id]
+CSeq: 1 UPDATE
+Max-Forwards: 70
+Contact: <sip:cf5d-d@127.0.0.1:[local_port]>
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 2001 2002 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15484 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="491" timeout="5000"/>
+  <pause milliseconds="100"/>
+  <send><![CDATA[
+SIP/2.0 200 OK
+Via: [$rvia]
+From: [$rf2]
+To: [$rto]
+Call-ID: [call_id]
+CSeq: [$rcseq]
+Contact: <sip:cf5d-d@127.0.0.1:[local_port]>
+Supported: timer
+Require: timer
+Session-Expires: 90;refresher=uac
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 2001 2001 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=sendrecv
+]]></send>
+  <recv request="ACK" crlf="true" timeout="5000"/>
+  <pause milliseconds="1000"/>
+  <send><![CDATA[
+BYE [$ctc] SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: <sip:cf5d-d@127.0.0.1:[local_port]>;tag=cf5dd[call_number]
+To: [$rfrom]
+Call-ID: [call_id]
+CSeq: 2 BYE
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <recv response="200" timeout="5000"/>
+  <label id="end"/>
+</scenario>

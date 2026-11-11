@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- Lane D (rfc-sweep-d) M-UPD: UAS toward the daemon UA; 3 s after the ACK an in-dialog UPDATE carries an SDP offer (m=audio 15484 RTP/AVP 0 101, o= version raised). -->
+<scenario name="m-upd">
+  <recv request="INVITE" crlf="true">
+    <action>
+      <ereg regexp=".*" search_in="hdr" header="From:" assign_to="rfrom"/>
+      <ereg regexp="sip:[^>;]*" search_in="hdr" header="Contact:" assign_to="ctc"/>
+    </action>
+  </recv>
+  <Reference variables="rfrom,ctc"/>
+  <send retrans="500"><![CDATA[
+SIP/2.0 200 OK
+[last_Via:]
+[last_From:]
+[last_To:];tag=cf5dd[call_number]
+[last_Call-ID:]
+[last_CSeq:]
+Contact: <sip:cf5d-d@127.0.0.1:[local_port]>
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 2001 2001 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=sendrecv
+]]></send>
+  <recv request="ACK" crlf="true" timeout="5000"/>
+  <pause milliseconds="3000"/>
+  <send><![CDATA[
+UPDATE [$ctc] SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: <sip:cf5d-d@127.0.0.1:[local_port]>;tag=cf5dd[call_number]
+To: [$rfrom]
+Call-ID: [call_id]
+CSeq: 1 UPDATE
+Max-Forwards: 70
+Contact: <sip:cf5d-d@127.0.0.1:[local_port]>
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 2001 2002 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15484 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="200" crlf="true" timeout="5000">
+    <action>
+      <ereg regexp="m=audio [0-9]+ RTP/AVP 0" search_in="msg" check_it="true" assign_to="am"/>
+    </action>
+  </recv>
+  <Reference variables="am"/>
+  <pause milliseconds="3000"/>
+  <send><![CDATA[
+BYE [$ctc] SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: <sip:cf5d-d@127.0.0.1:[local_port]>;tag=cf5dd[call_number]
+To: [$rfrom]
+Call-ID: [call_id]
+CSeq: 2 BYE
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <recv response="200" timeout="5000"/>
+  <label id="end"/>
+</scenario>

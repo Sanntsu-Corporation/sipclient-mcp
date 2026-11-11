@@ -1,0 +1,41 @@
+# examples/policy.yaml — an annotated example, not a default.
+#
+# E-M8 (D20, P4-W2-01, Phase 4 W2): this file was a three-line bootstrap
+# placeholder, so the five operator-facing keys Phase 3 added were documented
+# ONLY in Go doc comments — invisible to anyone writing a policy file.
+#
+# Load it with:  sipclient-mcpd --policy examples/policy.yaml
+# Every bound quoted below is enforced by internal/policy at LOAD (Load ->
+# validate -> resolve); a file that violates one fails to load rather than being
+# silently clamped. Decoding is STRICT (KnownFields(true)), so an unknown key
+# fails the whole file rather than being ignored.
+
+auth:
+  # bearer_token_file — REQUIRED. An empty or absent value fails validate();
+  # a path that cannot be read fails resolve(). Relative paths resolve against
+  # the daemon's working directory, so run the command above from the repo root.
+  # The file below holds an obviously-fake placeholder, NOT a credential.
+  bearer_token_file: examples/bearer_token.txt
+
+# artifact.dir (Phase 2 §2.6): PERMANENTLY NOT settable at runtime through
+# config_set — the artifact store, its janitor and every in-flight capture
+# resolve this directory ONCE, at process construction. Set it here (or in
+# the daemon's own bootstrapped state file) and RESTART the daemon for a
+# change to take effect; a live config_set on this key is rejected outright.
+# artifact:
+#   dir: /var/lib/sipclient-mcp/artifacts
+
+# limits.max_redirects: how many new INVITEs one call_dial may send to 3xx
+# (300/301/302) redirect targets. Default 3, 0 disables following, range 0-10.
+# Settable live with config_set limits.max_redirects.
+# limits:
+#   max_redirects: 3
+
+# profiles — REMOVED (Phase 1, session-scoped UA lifecycle, owner-locked
+# decision). SIP accounts (aor, auth_user, auth_pass, registrar, transport,
+# dtmf_mode, session_expires_s, min_se_s, session_refresh_method,
+# keepalive_interval_s, expires_s, keepalive) are now supplied INLINE on
+# ua_create itself, per session, instead of being resolved server-side from a
+# named entry in this file. A policy file that still carries a `profiles:`
+# key is rejected wholesale by the strict decoder (KnownFields(true)), with
+# the same "unknown key" error as any other removed key.

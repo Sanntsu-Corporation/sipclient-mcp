@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- cf6-a CF-187: an RTP/SAVP offer lists an unsupported suite (tag 1) before AES_CM_128 (tag 2); our UA must answer with tag 2. The key is the rig lab-only key. -->
+<scenario name="cf6a-uac-sdes-order">
+  <send retrans="500"><![CDATA[
+INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+To: <sip:cf5d-uas@127.0.0.1:15460>
+Call-ID: [call_id]
+CSeq: 1 INVITE
+Contact: <sip:sipp@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=sipp 1696 1696 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/SAVP 0
+a=rtpmap:0 PCMU/8000
+a=crypto:1 AES_256_CM_HMAC_SHA1_80 inline:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+a=crypto:2 AES_CM_128_HMAC_SHA1_80 inline:JvV5O8fTRA3ahSKGjh6wEai6NrqxsDl8g0dUk/dz
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="200" timeout="25000">
+    <action>
+      <ereg regexp="a=crypto:2 AES_CM_128_HMAC_SHA1_80 inline:" search_in="msg" check_it="true" assign_to="c1"/>
+    </action>
+  </recv>
+  <Reference variables="c1"/>
+  <send><![CDATA[
+ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 1 ACK
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <pause milliseconds="2000"/>
+  <send><![CDATA[
+BYE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 99 BYE
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <recv response="200" timeout="5000"/>
+</scenario>
