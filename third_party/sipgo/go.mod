@@ -1,9 +1,9 @@
 module github.com/emiago/sipgo
 
-go 1.20
+go 1.26
 
 require (
-	github.com/gobwas/ws v1.3.2
+	github.com/gobwas/ws v1.5.0
 	github.com/google/uuid v1.6.0
 	github.com/icholy/digest v0.1.22
 	github.com/rs/zerolog v1.33.0
@@ -14,7 +14,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
-	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
