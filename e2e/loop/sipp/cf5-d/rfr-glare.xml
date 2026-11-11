@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- R-GLARE (Lane C Task 4, UA-3 90/90 refresh by re-INVITE dials SIPp UAS, Allow without UPDATE): on receiving our re-INVITE refresh SIPp sends its own re-INVITE (Request-URI our Contact, its tag in From, our From as To, a PCMU offer), takes our final response to it in optional branches (491 or 200, each ACKed), then answers our re-INVITE 200 from the headers captured with ereg. -->
+<scenario name="rfr-glare">
+  <recv request="INVITE" crlf="true"/>
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=cf5dc[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:cf5d-c-peer@127.0.0.1:15470>
+      Allow: INVITE, ACK, BYE, CANCEL
+      Supported: timer
+      Require: timer
+      Session-Expires: 90;refresher=uac
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=cf5dc 1 1 IN IP4 127.0.0.1
+      s=-
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 15482 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+  <recv request="ACK" crlf="true"/>
+  <recv request="INVITE" crlf="true" timeout="70000">
+    <action>
+      <ereg regexp=".*" search_in="hdr" header="Via:" assign_to="rvia"/>
+      <ereg regexp=".*" search_in="hdr" header="From:" assign_to="rfrom"/>
+      <ereg regexp=".*" search_in="hdr" header="To:" assign_to="rto"/>
+      <ereg regexp=".*" search_in="hdr" header="CSeq:" assign_to="rcseq"/>
+      <ereg regexp="sip:[^>;]*" search_in="hdr" header="Contact:" assign_to="ctc"/>
+    </action>
+  </recv>
+  <Reference variables="rvia,rfrom,rto,rcseq,ctc"/>
+  <send>
+    <![CDATA[
+      INVITE [$ctc] SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5dcGLARE[call_number]
+      From: [$rto]
+      To: [$rfrom]
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Max-Forwards: 70
+      Contact: <sip:cf5d-c-peer@127.0.0.1:15470>
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=cf5dc 1 2 IN IP4 127.0.0.1
+      s=-
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 15482 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+  <recv response="100" optional="true"/>
+  <recv response="491" timeout="5000"/>
+  <send>
+    <![CDATA[
+      ACK [$ctc] SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5dcGLARE[call_number]
+      From: [$rto]
+      [last_To:]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+  <label id="ans"/>
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      Via: [$rvia]
+      From: [$rfrom]
+      To: [$rto]
+      Call-ID: [call_id]
+      CSeq: [$rcseq]
+      Contact: <sip:cf5d-c-peer@127.0.0.1:15470>
+      Supported: timer
+      Require: timer
+      Session-Expires: 90;refresher=uac
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=cf5dc 1 1 IN IP4 127.0.0.1
+      s=-
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 15482 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+  <recv request="ACK" crlf="true"/>
+  <pause milliseconds="1000"/>
+  <send><![CDATA[
+BYE [$ctc] SIP/2.0
+Via: SIP/2.0/UDP 127.0.0.1:15470;branch=[branch]
+From: [$rto]
+To: [$rfrom]
+Call-ID: [call_id]
+CSeq: 2 BYE
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <recv response="200" timeout="5000"/>
+  <label id="done"/>
+</scenario>

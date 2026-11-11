@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GOFLAGS: -buildvcs=false
+
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.3
+      - name: Build
+        run: go build ./...
+      - name: Generate sipgo test certificates
+        # Test-only private keys for the vendored sipgo module. Generated in
+        # this job only; never in the secrets job.
+        run: cd third_party/sipgo/testdata && bash ./generate_certs_rsa.sh
+      - name: Test (root module)
+        # Same as `make test`, with a timeout above the 10 minute default
+        # because internal/sipua takes about 6 minutes. E2E and live tests
+        # skip on their own env guards (no rig variables are set).
+        run: |
+          go test -count=1 ./internal/importguard/...
+          go test -race -timeout 20m ./...
+      - name: Test internal/proxy with the experimental JSON implementation off
+        run: GOEXPERIMENT=nojsonv2 go test ./internal/proxy/
+      - name: Vet and test (vendored sipgo module)
+        # The root sipgo package is excluded from vet because of an upstream
+        # lostcancel warning in its integration test.
+        working-directory: third_party/sipgo
+        run: |
+          set -euo pipefail
+          pkgs=$(go list ./... | grep -v '^github.com/emiago/sipgo$')
+          test -n "$pkgs"
+          go vet $pkgs
+          go test -race ./...
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.3
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+
+  vuln:
+    name: vuln
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.27.3
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - name: Scan root module
+        run: govulncheck ./...
+      - name: Scan vendored sipgo module
+        working-directory: third_party/sipgo
+        run: govulncheck ./...
+
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks v8.30.1
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          # From the official gitleaks_8.30.1_checksums.txt of that release.
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$tarball"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP/gitleaks" gitleaks
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+      - name: Scan full git history
+        # Git mode, never dir/--no-git: the placeholder exceptions in
+        # .gitleaks.toml are only evaluated correctly over git history.
+        run: gitleaks git --config .gitleaks.toml --no-banner --redact -v .

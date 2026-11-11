@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<scenario name="uas-require">
+  <send>
+    <![CDATA[
+      INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5daINV[call_number]
+      Via: SIP/2.0/UDP 127.0.0.1:15479;branch=z9hG4bK-cf5d-up
+      Record-Route: <sip:127.0.0.1:15470;lr;rr=1>
+      Record-Route: <sip:127.0.0.1:15479;lr;rr=2>
+      From: <sip:cf5d-a-peer@127.0.0.1>;tag=cf5da[call_number]
+      To: <sip:cf5d-uas@127.0.0.1>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: <sip:cf5d-a-peer@127.0.0.1:15470>
+      Max-Forwards: 70
+      Require: cf5d-a-unknown
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=cf5da 1 1 IN IP4 127.0.0.1
+      s=-
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 15482 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+  <recv response="100" optional="true"/>
+  <recv response="420" timeout="5000">
+    <action>
+      <ereg regexp="cf5d-a-unknown" search_in="hdr" header="Unsupported:" check_it="true" assign_to="u"/>
+    </action>
+  </recv>
+  <Reference variables="u"/>
+  <send>
+    <![CDATA[
+      ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5daINV[call_number]
+      From: <sip:cf5d-a-peer@127.0.0.1>;tag=cf5da[call_number]
+      [last_To:]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+  <label id="done"/>
+  <pause milliseconds="1000"/>
+</scenario>

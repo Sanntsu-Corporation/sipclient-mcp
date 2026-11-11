@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- cf5-d S-CTYPE: text/plain body (CF-146); the INVITE must draw 415 carrying Accept: -->
+<scenario name="s-ctype">
+  <send retrans="500"><![CDATA[
+INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+To: <sip:cf5d-uas@127.0.0.1:15460>
+Call-ID: [call_id]
+CSeq: 1 INVITE
+Contact: <sip:sipp@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: text/plain
+Content-Length: [len]
+
+v=0
+o=sipp 1696 1696 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 15482 RTP/AVP 0 8 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=sendrecv
+]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="415" timeout="5000">
+    <action>
+      <ereg regexp="application/sdp" search_in="hdr" header="Accept:" check_it="true" assign_to="h"/>
+    </action>
+  </recv>
+  <Reference variables="h"/>
+  <send><![CDATA[
+ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+Via: SIP/2.0/UDP [local_ip]:[local_port];branch=[branch]
+From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+[last_To:]
+Call-ID: [call_id]
+CSeq: 1 ACK
+Max-Forwards: 70
+Content-Length: 0
+
+]]></send>
+  <pause milliseconds="500"/>
+</scenario>

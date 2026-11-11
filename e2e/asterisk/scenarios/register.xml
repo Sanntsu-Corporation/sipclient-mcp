@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  e2e/asterisk/scenarios/register.xml
+
+  Proves: REGISTER bind + release against e2e-uac-register (the dynamic-AOR
+  endpoint, pjsip.conf [e2e-uac-register]/[auth-e2e-uac-register]).
+
+  Asterisk digest-challenges every REGISTER (RFC 3261 22.1), so each of the
+  two REGISTERs below is a two-round-trip flow: send -> mandatory 401 ->
+  retry with Authorization -> mandatory 200 OK. First REGISTER (Expires:
+  3600) proves bind; the second (Expires: 0) immediately releases the
+  binding again, so a run of this scenario leaves no stale contact behind
+  (see USAGE.md's `pjsip show contacts` note and README's AOR-name note --
+  the AOR section here is literally named e2e-uac-register, matching the
+  username, or the REGISTER 404s silently).
+
+  Run: docker compose run --rm -T sipp -sf /scenarios/register.xml <host>:5060 -m 1
+-->
+<scenario name="REGISTER bind + release (digest auth)">
+
+  <!-- ===== bind (Expires: 3600) ===== -->
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:e2e-uac-register@[remote_ip]>;tag=[call_number]
+      To: <sip:e2e-uac-register@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:e2e-uac-register@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 3600
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+
+  <!-- Mandatory: this endpoint must always challenge. A 200 here instead
+       (no auth) would mean the endpoint config regressed to no-auth. -->
+  <recv response="401" auth="true"/>
+
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:e2e-uac-register@[remote_ip]>;tag=[call_number]
+      To: <sip:e2e-uac-register@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 REGISTER
+      Contact: <sip:e2e-uac-register@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 3600
+      [authentication username=e2e-uac-register password=e2e-test-only-not-a-secret]
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+  <recv response="200" rtd="true"/>
+
+  <!-- ===== release (Expires: 0) ===== -->
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:e2e-uac-register@[remote_ip]>;tag=[call_number]
+      To: <sip:e2e-uac-register@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 3 REGISTER
+      Contact: <sip:e2e-uac-register@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 0
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+  <recv response="401" auth="true"/>
+
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:e2e-uac-register@[remote_ip]>;tag=[call_number]
+      To: <sip:e2e-uac-register@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 4 REGISTER
+      Contact: <sip:e2e-uac-register@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 0
+      [authentication username=e2e-uac-register password=e2e-test-only-not-a-secret]
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+  <recv response="200" rtd="true"/>
+
+</scenario>

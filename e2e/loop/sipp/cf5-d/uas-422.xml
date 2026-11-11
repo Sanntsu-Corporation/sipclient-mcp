@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!-- S-422 (UA-2 120/120): Supported: timer, Session-Expires: 100, Min-SE: 90; expects 422, ACKs, then idles 40 s to see any 422 retransmission.
+     Lane C Task 3: SIPp UAC on 127.0.0.1:15470 sends one INVITE (PCMU offer) to the daemon UA on
+     127.0.0.1:15460; the agent answers with call_answer. -->
+<scenario name="uas-422">
+  <send retrans="500">
+    <![CDATA[
+      INVITE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5dcINV[call_number]
+      From: <sip:cf5d-c-caller@127.0.0.1>;tag=cf5dc[call_number]
+      To: <sip:cf5d-uas@127.0.0.1>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: <sip:cf5d-c-caller@127.0.0.1:15470>
+      Max-Forwards: 70
+      Supported: timer
+      Session-Expires: 100
+      Min-SE: 90
+      Allow: INVITE, ACK, BYE, CANCEL, UPDATE
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=cf5dc 1 1 IN IP4 127.0.0.1
+      s=-
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 15482 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="422" timeout="10000"/>
+  <send>
+    <![CDATA[
+      ACK sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5dcINV[call_number]
+      From: <sip:cf5d-c-caller@127.0.0.1>;tag=cf5dc[call_number]
+      [last_To:]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+  <pause milliseconds="3000"/>
+</scenario>

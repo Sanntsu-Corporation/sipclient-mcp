@@ -1,0 +1,39 @@
+# gitleaks configuration: the DEFAULT rule set, plus narrow exceptions for
+# placeholder test/example values. Every exception is an anchored path AND the
+# exact placeholder content (condition = "AND"), never a path-wide allow, so a
+# real credential written into one of these files is still reported.
+
+title = "sipclient-mcp gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "e2e loop gate placeholder SIP password"
+condition = "AND"
+paths = ['''^e2e/loop/auth_pass\.txt$''']
+regexes = ['''^e2e-test-only-not-a-secret$''']
+
+[[allowlists]]
+description = "e2e loop gate placeholder bearer token"
+condition = "AND"
+paths = ['''^e2e/loop/bearer_token\.txt$''']
+regexes = ['''^e2e-loop-gate-bearer-token-not-a-secret$''']
+
+[[allowlists]]
+description = "example placeholder bearer token"
+condition = "AND"
+paths = ['''^examples/bearer_token\.txt$''']
+regexes = ['''^example-only-not-a-secret$''']
+
+[[allowlists]]
+description = "fake SIP URI userinfo password used by the ToURI sanitiser tests"
+condition = "AND"
+paths = ['''^internal/session/calllog_test\.go$''']
+regexes = ['''^hunter2@example\.com$''']
+
+[[allowlists]]
+description = "fake base64 SDES key material ('fakeSRTPkeyMaterialForTesting1234', 'SecondFakeSRTPKeyMaterialForMKI23') used by the redaction tests"
+condition = "AND"
+paths = ['''^internal/sipua/observe_test\.go$''']
+regexes = ['''^ZmFrZVNSVFBrZXlNYXRlcmlhbEZvclRlc3RpbmcxMjM0$''', '''^U2Vjb25kRmFrZVNSVFBLZXlNYXRlcmlhbEZvck1LSTIzNDU$''']

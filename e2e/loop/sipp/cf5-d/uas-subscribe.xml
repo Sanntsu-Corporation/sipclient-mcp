@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<scenario name="uas-subscribe">
+  <send>
+    <![CDATA[
+      SUBSCRIBE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5daSUB[call_number]
+      From: <sip:cf5d-a-peer@127.0.0.1>;tag=cf5da[call_number]
+      To: <sip:cf5d-uas@127.0.0.1>
+      Call-ID: [call_id]
+      CSeq: 1 SUBSCRIBE
+      Max-Forwards: 70
+      Contact: <sip:cf5d-a-peer@127.0.0.1:15470>
+      Event: presence
+      Expires: 60
+      Content-Length: 0
+
+    ]]>
+  </send>
+  <recv response="405" timeout="5000">
+    <action>
+      <ereg regexp="INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, UPDATE, NOTIFY" search_in="hdr" header="Allow:" check_it="true" assign_to="a"/>
+    </action>
+  </recv>
+  <Reference variables="a"/>
+  <label id="m2"/>
+  <send>
+    <![CDATA[
+      MESSAGE sip:cf5d-uas@127.0.0.1:15460 SIP/2.0
+      Via: SIP/2.0/UDP 127.0.0.1:15470;branch=z9hG4bKcf5daMSG[call_number]
+      From: <sip:cf5d-a-peer@127.0.0.1>;tag=cf5da[call_number]
+      To: <sip:cf5d-uas@127.0.0.1>
+      Call-ID: [call_id]
+      CSeq: 2 MESSAGE
+      Max-Forwards: 70
+      Contact: <sip:cf5d-a-peer@127.0.0.1:15470>
+      Content-Type: text/plain
+      Content-Length: [len]
+
+      hello
+
+    ]]>
+  </send>
+  <recv response="405" timeout="5000">
+    <action>
+      <ereg regexp="INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, UPDATE, NOTIFY" search_in="hdr" header="Allow:" check_it="true" assign_to="b"/>
+    </action>
+  </recv>
+  <Reference variables="b"/>
+  <label id="done"/>
+  <pause milliseconds="1000"/>
+</scenario>

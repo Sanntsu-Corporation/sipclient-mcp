@@ -1,0 +1,64 @@
+# e2e/loop/policy.yaml — policy for the standing loop-call interop gate
+# (P2 Wave-1 exit criterion, spec §14.5).
+#
+# It is loaded by a LOCALLY spawned sipclient-mcpd (the harness spawns
+# `sipclient-mcpd --listen 127.0.0.1:<port> --policy e2e/loop/policy.yaml`).
+# File paths below are RELATIVE TO THE REPOSITORY ROOT: the harness spawns the
+# daemon with its working directory set to the repo root, so run the harness —
+# or a hand-launched daemon — from the repo root.
+#
+# The two credentials are committed on purpose and are TEST-ONLY: the rig's
+# README states `e2e-test-only-not-a-secret` is not a real secret, and the
+# bearer token guards only a loopback-bound daemon that emits SIP to the lab
+# rig alone. Do not reuse either value anywhere real.
+
+auth:
+  # Guards the MCP-over-HTTP surface. The harness presents this as
+  # `Authorization: Bearer <token>` on every request.
+  bearer_token_file: e2e/loop/bearer_token.txt
+
+# PROFILES ARE GONE (Phase 1, D1/D6). This file used to carry a `profiles:`
+# section naming every SIP account the gate creates UAs against. ua_create now
+# takes an account INLINE on the request, policy.Profile is deleted, and
+# policy.Load's strict decoder (KnownFields(true)) REJECTS THE WHOLE FILE if a
+# `profiles:` key is still present — the daemon this harness spawns would not
+# start at all. The same account inventory now lives in accounts.go, sent
+# field-by-field on each ua_create; see that file for the migration map and
+# for the two accounts (e2e-uac-inband/-info) that were unreferenced here.
+
+# T7 (P2 W2c): the capture_start/capture_stop artifact store's backing
+# directory, repo-root-relative (the harness spawns the daemon with cwd =
+# repo root — see daemon.go). Only T7's TCP/TLS driver arms captures; the
+# existing UDP scenarios never call capture_start, so this is purely additive.
+prompts:
+  # P2 W5: the play/record round-trip scenario's prompt (§14.5, R3). Path is
+  # repo-root-relative, matching bearer_token_file/artifact.dir above.
+  - name: prompt-1
+    path: e2e/loop/prompts/prompt-1.wav
+
+artifact:
+  dir: e2e/loop/artifacts
+
+tls:
+  # T7 (-transport tls): trust anchor for the rig's self-signed cert
+  # (e2e/asterisk/gen-certs.sh). Repo-root-relative, matching the other paths
+  # above.
+  ca_bundle: e2e/asterisk/conf/keys/ca.crt
+
+limits:
+  # Two simultaneous legs (caller leg + inbound leg) are live at once during
+  # the answered/disconnect scenarios, so both concurrency caps must be >= 2.
+  # 4 leaves headroom without hiding a leak.
+  max_concurrent_calls_per_session: 4
+  max_concurrent_calls_total: 4
+  # Multi-UA-per-session wave (CF-001): the gate creates a caller (direct
+  # mode) and a callee (register mode) UA on the SAME MCP session. This was
+  # originally kept tight at 2 as a tripwire against an accidental third
+  # ua_create, but that premise ("2 is exactly what this rig needs") was
+  # never live-verified — 9 of 21 scenarios legitimately
+  # create a third, transient UA (codec negotiation, session-timer,
+  # keepalive) while the standing caller/callee pair is still alive, and all
+  # failed against the cap. Raised to match the daemon's own default
+  # (limits.max_uas_per_session) rather than re-deriving a harness-specific
+  # tighter number.
+  max_uas_per_session: 8
